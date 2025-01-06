@@ -116,7 +116,6 @@ python interpretador.py TESTE.zin
 ## Próximos Passos
 - Melhorar a documentação com mais exemplos práticos.
 - Suporte a mais tipos de dados e operadores.
-- Implementar um compilador para traduzir programas Zin para Python.
 
 ## Contribuições
 Sinta-se à vontade para contribuir com melhorias! Faça um fork do repositório e envie suas sugestões.
