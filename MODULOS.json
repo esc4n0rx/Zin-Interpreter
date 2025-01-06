@@ -1,0 +1,88 @@
+{
+    "programa": {
+        "nome": "TESTE_MODULOS",
+        "variaveis": [
+            {
+                "nome": "nome",
+                "tipo": "texto"
+            },
+            {
+                "nome": "idade",
+                "tipo": "inteiro"
+            }
+        ],
+        "implementacao": {
+            "principal": [
+                {
+                    "pergunte": {
+                        "texto": "Qual o seu nome?",
+                        "variavel": "nome"
+                    }
+                },
+                {
+                    "pergunte": {
+                        "texto": "Qual a sua idade?",
+                        "variavel": "idade"
+                    }
+                },
+                {
+                    "executar_modulo": "SAUDACAO"
+                },
+                {
+                    "executar_modulo": "VERIFICA_IDADE"
+                }
+            ],
+            "execucoes_apos_principal": [],
+            "modulos": {
+                "SAUDACAO": [
+                    {
+                        "nome": "cumprimenta",
+                        "parametros": [
+                            "nome"
+                        ],
+                        "corpo": [
+                            {
+                                "escreva": "Olá {nome}, seja bem-vindo!"
+                            }
+                        ],
+                        "retorno": "null"
+                    }
+                ],
+                "VERIFICA_IDADE": [
+                    {
+                        "nome": "verifica",
+                        "parametros": [
+                            "idade"
+                        ],
+                        "corpo": [
+                            {
+                                "tipo": "SE",
+                                "condicao": {
+                                    "left": "idade",
+                                    "operator": ">=",
+                                    "right": "18"
+                                },
+                                "bloco_se": [
+                                    {
+                                        "escreva": "Você é maior de idade."
+                                    }
+                                ],
+                                "bloco_senao": [
+                                    {
+                                        "escreva": "Você é menor de idade."
+                                    }
+                                ]
+                            }
+                        ],
+                        "retorno": "null"
+                    }
+                ]
+            }
+        },
+        "execucao": {
+            "modulos": [
+                "PRINCIPAL"
+            ]
+        }
+    }
+}
