@@ -1,0 +1,34 @@
+name: Package VSCode Extension
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16' # Escolha a versão apropriada para você
+
+    - name: Install vsce
+      run: npm install -g vsce
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Package Extension
+      run: vsce package
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: zin-syntax-highlighter
+        path: ./*.vsix
