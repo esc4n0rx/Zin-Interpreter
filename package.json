@@ -1,0 +1,38 @@
+{
+    "name": "zin-syntax-highlighter",
+    "displayName": "Zin Syntax Highlighter",
+    "description": "Extensão para destacar sintaxe de arquivos .zin.",
+    "version": "1.0.0",
+    "publisher": "Paulo Oliveira",
+    "engines": {
+      "vscode": "^1.70.0"
+    },
+    "categories": [
+      "Programming Languages"
+    ],
+    "contributes": {
+      "languages": [
+        {
+          "id": "zin",
+          "aliases": ["Zin", "zin"],
+          "extensions": [".zin"],
+          "configuration": "./syntaxes/zin.tmLanguage.json"
+        }
+      ],
+      "grammars": [
+        {
+          "language": "zin",
+          "scopeName": "source.zin",
+          "path": "./syntaxes/zin.tmLanguage.json"
+        }
+      ],
+      "themes": [
+        {
+          "label": "Zin Syntax Theme",
+          "uiTheme": "vs-dark",
+          "path": "./themes/ZinSyntaxTheme.json"
+        }
+      ]
+    }
+  }
+  

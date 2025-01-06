@@ -303,7 +303,6 @@ class Parser:
                 self.expect("SYMBOL", ".")
                 self.ast["programa"]["execucao"]["modulos"].append(modulo)
         
-        # Removido o 'self.expect("SYMBOL", ".")' aqui
 
 
 
@@ -346,16 +345,13 @@ if __name__ == "__main__":
     FIM PROGAMA TESTE_MODULOS.
     """
 
-    # Instancia o lexer e pega os tokens
     lexer = Lexer()
     tokens = lexer.tokenize(code)
 
-    # Roda o parser
     parser = Parser(tokens)
     ast = parser.parse()
 
-    # Salva em JSON
-    program_name = ast["programa"]["nome"]  # Nome do programa
+    program_name = ast["programa"]["nome"] 
     file_name = f"{program_name}.json"
     with open(file_name, "w", encoding="utf-8") as json_file:
         json.dump(ast, json_file, indent=4, ensure_ascii=False)

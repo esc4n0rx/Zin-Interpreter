@@ -172,31 +172,22 @@ class Interpretador:
         corpo = funcao["corpo"]
         retorno = funcao["retorno"]
 
-        # Copia todo o contexto atual (global ou da função chamadora)
         contexto_local = dict(self.contexto)
 
-        # Empilha o contexto anterior
         self.pilha_contexto.append(self.contexto)
 
-        # Agora self.contexto "aponta" para esse dicionário local
         self.contexto = contexto_local
 
-        # Inicializa parâmetros: se quiser garantir que existam
-        # no local, mas nesse design, eles já estão copiados do global.
-        # Se quiser forçar None caso não existam no global, pode ajustar:
         for param in parametros:
             if param not in self.contexto:
                 self.contexto[param] = None
 
         print(f"Executando função: {nome_funcao} com contexto: {self.contexto}")
 
-        # Executa o corpo da função
         self.executar_principal(corpo)
 
-        # Avalia o retorno
         resultado = self.avaliar_expressao(retorno)
 
-        # Restaura o contexto anterior
         self.contexto = self.pilha_contexto.pop()
 
         return resultado

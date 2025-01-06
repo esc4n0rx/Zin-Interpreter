@@ -1,0 +1,28 @@
+{
+    "scopeName": "source.zin",
+    "patterns": [
+      {
+        "name": "keyword.control.zin",
+        "match": "\\b(INICIO|IMPLEMENTACAO|EXECUCAO|FIM|PRINCIPAL|EXECUTAR|MODULO|funcao|variavel|tipo|SE|ENTAO|SENAO|ENQUANTO|FAÇA|retorne)\\b"
+      },
+      {
+        "name": "constant.numeric.zin",
+        "match": "\\b\\d+(\\.\\d+)?\\b"
+      },
+      {
+        "name": "string.quoted.double.zin",
+        "begin": "\"",
+        "end": "\""
+      },
+      {
+        "name": "comment.line.zin",
+        "begin": "//",
+        "end": "$"
+      }
+    ],
+    "repository": {},
+    "fileTypes": ["zin"],
+    "name": "Zin",
+    "uuid": "some-uuid-for-syntax"
+  }
+  

@@ -1,0 +1,41 @@
+{
+    "name": "Zin Syntax Theme",
+    "type": "dark",
+    "colors": {},
+    "tokenColors": [
+      {
+        "scope": "keyword.control.zin",
+        "settings": {
+          "foreground": "#00FF00", 
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "keyword.other.zin",
+        "settings": {
+          "foreground": "#7FFF00", 
+          "fontStyle": "italic"
+        }
+      },
+      {
+        "scope": "constant.numeric.zin",
+        "settings": {
+          "foreground": "#FF4500"
+        }
+      },
+      {
+        "scope": "string.quoted.double.zin",
+        "settings": {
+          "foreground": "#FFD700" 
+        }
+      },
+      {
+        "scope": "comment.line.zin",
+        "settings": {
+          "foreground": "#808080", 
+          "fontStyle": "italic"
+        }
+      }
+    ]
+  }
+  
