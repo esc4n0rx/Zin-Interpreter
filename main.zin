@@ -1,0 +1,29 @@
+INICIO PROGAMA CALCULADORA.
+variavel numero1 tipo inteiro
+variavel numero2 tipo inteiro
+variavel resultado tipo inteiro
+
+IMPLEMENTACAO PROGAMA CALCULADORA.
+PRINCIPAL.
+pergunte("Digite o primeiro número:" {numero1}).
+pergunte("Digite o segundo número:" {numero2}).
+EXECUTAR MODULO OPERACOES.
+escreva("O cálculo foi concluído.").
+FIM PRINCIPAL.
+
+MODULO OPERACOES.
+funcao calcular(numero1, numero2)
+    SE numero1 > numero2 ENTAO.
+        resultado = numero1 - numero2.
+        escreva("O resultado é {resultado}.").
+    SENAO.
+        resultado = numero1 + numero2.
+        escreva("O resultado é {resultado}.").
+    FIM SE.
+retorne resultado.
+FIM MODULO.
+
+EXECUCAO PROGAMA CALCULADORA.
+EXECUTAR PRINCIPAL.
+
+FIM PROGAMA CALCULADORA.
