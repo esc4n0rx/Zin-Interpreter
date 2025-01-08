@@ -55,8 +55,32 @@ class Interpretador:
         print(f"Executando programa: {programa['nome']}")
 
         # Inicializa variáveis com None, tipo um teste cego
-        for variavel in programa["variaveis"]:
-            self.contexto[variavel["nome"]] = None
+        for var_info in programa["variaveis"]:
+            var_nome = var_info["nome"]
+            var_tipo = var_info["tipo"]
+
+            # Se for lista, converte 'valores' em lista Python
+            if var_tipo == "lista":
+                valores_crus = var_info.get("valores", [])  # lista de strings/números
+                lista_python = []
+                for item in valores_crus:
+                    # Se item for string e contiver só dígitos, converta pra int
+                    if isinstance(item, str) and item.isdigit():
+                        lista_python.append(int(item))
+                    else:
+                        lista_python.append(item)
+                self.contexto[var_nome] = lista_python
+
+            # Se for grupo, você pode montar um dicionário com "campos" e "dados"
+            elif var_tipo == "grupo":
+                grupo_valores = var_info.get("valores", {})
+                # Ex: grupo_valores = {"campos": [...], "dados": [...]}
+                # Aqui você guarda esse dicionário no contexto
+                self.contexto[var_nome] = grupo_valores
+
+            # Caso contrário, inicialize com None (variáveis simples)
+            else:
+                self.contexto[var_nome] = None
 
         self.modulos = programa["implementacao"].get("modulos", {})
 
@@ -84,39 +108,69 @@ class Interpretador:
                 self.interpretar_enquanto(comando)
             elif "executar_modulo" in comando:
                 self.executar_modulo(comando["executar_modulo"])
+            elif "acesso_lista" in comando:
+                valor = self.acessar_lista(comando)
+                print(valor)  # Exemplo de como usar o valor
+            elif "acesso_grupo" in comando:
+                valor = self.acessar_grupo(comando)
+                print(valor)  # Exemplo de como usar o valor
+
+
             # Fim do if. E a gente reza pra nada dar erro
 
     def interpretar_atribuicao(self, comando):
-        # Hora de enfiar valores nas variáveis, do jeito que a gente acha certo
         variavel = comando["atribuir"]["variavel"]
         valor = comando["atribuir"]["valor"]
 
-        # Se for dicionário com left e right, é sinal de que tem operação, viva
-        if isinstance(valor, dict) and "left" in valor:
+        if isinstance(valor, dict) and "acesso_lista" in valor:
+            valor = self.acessar_lista(valor)
+        elif isinstance(valor, dict) and "acesso_grupo" in valor:
+            valor = self.acessar_grupo(valor)
+        elif isinstance(valor, dict) and "left" in valor:
             left = self.contexto.get(valor["left"], valor["left"])
             right = self.contexto.get(valor["right"], valor["right"])
             operator = valor["operator"]
-            # Nada como ver sinal de +, -, * e /...
             if operator == "+":
-                self.contexto[variavel] = int(left) + int(right)
+                valor = int(left) + int(right)
             elif operator == "-":
-                self.contexto[variavel] = int(left) - int(right)
+                valor = int(left) - int(right)
             elif operator == "*":
-                self.contexto[variavel] = int(left) * int(right)
+                valor = int(left) * int(right)
             elif operator == "/":
-                self.contexto[variavel] = int(left) // int(right)
-            # Se for outro operador, estamos perdidos
-        else:
-            # Valor direto, sem emoção
-            self.contexto[variavel] = valor
+                valor = int(left) // int(right)
+
+        self.contexto[variavel] = valor
+
 
     def interpretar_escreva(self, comando):
-        # Mostrar coisas na tela, tipo "Hello World", mas dinamicamente
         texto = comando["escreva"]
         for variavel, valor in self.contexto.items():
-            # Troca os placeholders {variavel} pelo valor. #MacGyverDev
             texto = texto.replace(f"{{{variavel}}}", str(valor) if valor is not None else "null")
+
+        # Verifica se há acessos diretos a LISTA ou GRUPO
+        while "{" in texto and "}" in texto:
+            inicio = texto.index("{")
+            fim = texto.index("}") + 1
+            placeholder = texto[inicio:fim]
+            chave = placeholder[1:-1]  # Remove as chaves {}
+            
+            # Processa acessos a LISTA ou GRUPO
+            if "." in chave or "[" in chave:
+                partes = chave.split(".")
+                nome = partes[0]
+                if "[" in nome:
+                    lista_nome, indice = nome.split("[")
+                    indice = int(indice[:-1])  # Remove o ']'
+                    valor = self.acessar_lista({"acesso_lista": {"nome": lista_nome, "indice": indice}})
+                if len(partes) > 1:
+                    campo = partes[1]
+                    valor = self.acessar_grupo({"acesso_grupo": {"nome": lista_nome, "indice": indice, "campo": campo}})
+                texto = texto.replace(placeholder, str(valor))
+            else:
+                texto = texto.replace(placeholder, str(self.contexto.get(chave, "null")))
+
         print(texto)
+
 
     def interpretar_pergunte(self, comando):
         # Este aqui é pra fazer input, porque a vida já não é complicada o bastante
@@ -151,6 +205,43 @@ class Interpretador:
 
         while self.avaliar_condicao(condicao):
             self.executar_principal(bloco)
+
+
+    def acessar_lista(self, comando):
+        nome_lista = comando["acesso_lista"]["nome"]
+        indice = comando["acesso_lista"]["indice"]
+
+        if nome_lista not in self.contexto or not isinstance(self.contexto[nome_lista], list):
+            raise ValueError(f"'{nome_lista}' não é uma lista válida.")
+
+        if indice < 0 or indice >= len(self.contexto[nome_lista]):
+            raise IndexError(f"Índice '{indice}' fora do intervalo para a lista '{nome_lista}'.")
+
+        return self.contexto[nome_lista][indice]
+    
+
+
+    def acessar_grupo(self, comando):
+        nome_grupo = comando["acesso_grupo"]["nome"]
+        indice = comando["acesso_grupo"]["indice"]
+        campo = comando["acesso_grupo"]["campo"]
+
+        if nome_grupo not in self.contexto or not isinstance(self.contexto[nome_grupo], dict):
+            raise ValueError(f"'{nome_grupo}' não é um grupo válido.")
+
+        grupo = self.contexto[nome_grupo]
+        if indice < 0 or indice >= len(grupo["dados"]):
+            raise IndexError(f"Índice '{indice}' fora do intervalo para o grupo '{nome_grupo}'.")
+
+        campos = grupo["campos"]
+        if campo not in campos:
+            raise ValueError(f"Campo '{campo}' não encontrado no grupo '{nome_grupo}'.")
+
+        campo_index = campos.index(campo)
+        return grupo["dados"][indice][campo_index]
+
+
+    
 
     def avaliar_condicao(self, condicao):
         # Verificar se left e right estão no contexto ou se são literais

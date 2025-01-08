@@ -60,15 +60,42 @@ class Parser:
         while self.current_token and self.current_token.value == "variavel":
             self.parse_variavel()
 
+        
     def parse_variavel(self):
-        self.expect("KEYWORD", "variavel")
-        nome = self.current_token.value
-        self.expect("IDENTIFIER")
-        self.expect("KEYWORD", "tipo")
-        tipo = self.current_token.value
-        self.expect("TYPE")
-        # Coloca a variável na lista. Esperamos que sejam poucas, né?
-        self.ast["programa"]["variaveis"].append({"nome": nome, "tipo": tipo})
+            self.expect("KEYWORD", "variavel")
+            nome = self.current_token.value
+            self.expect("IDENTIFIER")
+            self.expect("KEYWORD", "tipo")
+            tipo = self.current_token.value
+            self.expect("TYPE")
+
+            if tipo == "lista":
+                # Parse da inicialização de LISTA, se existir
+                if self.current_token and self.current_token.value == "=":
+                    self.expect("ASSIGN")
+                    valores = self.parse_lista()
+                else:
+                    valores = []
+
+                self.ast["programa"]["variaveis"].append({"nome": nome, "tipo": tipo, "valores": valores})
+
+            elif tipo == "grupo":
+                # Parse da inicialização de GRUPO
+                if self.current_token and self.current_token.value == "=":
+                    self.expect("ASSIGN")
+                    valores = self.parse_grupo()
+                else:
+                    valores = {"campos": [], "dados": []}
+
+                self.ast["programa"]["variaveis"].append({"nome": nome, "tipo": tipo, "valores": valores})
+            else:
+                # Variáveis normais
+                self.ast["programa"]["variaveis"].append({"nome": nome, "tipo": tipo})
+
+
+        
+
+
 
     # ---------------------------------------------------------
     #  BLOCO: IMPLEMENTACAO
@@ -154,14 +181,76 @@ class Parser:
             "corpo": corpo,
             "retorno": retorno
         }
+    
+
+    def parse_lista(self):
+            self.expect("SYMBOL", "[")
+            valores = []
+            while self.current_token and self.current_token.value != "]":
+                if self.current_token.type in ("NUMBER", "STRING"):
+                    valores.append(self.current_token.value)
+                    self.expect(self.current_token.type)
+                    if self.current_token and self.current_token.value == ",":
+                        self.expect("SYMBOL", ",")
+                else:
+                    raise SyntaxError(f"Valor inválido na lista: {self.current_token}")
+            self.expect("SYMBOL", "]")
+            return valores
+    
+
+
+    def parse_grupo(self):
+        self.expect("KEYWORD", "GRUPO")
+        self.expect("SYMBOL", "(")
+
+        # Parse do cabeçalho
+        self.expect("SYMBOL", "[")
+        campos = []
+        while self.current_token and self.current_token.value != "]":
+            if self.current_token.type == "STRING":
+                campos.append(self.current_token.value.strip('"'))
+                self.expect("STRING")
+                if self.current_token and self.current_token.value == ",":
+                    self.expect("SYMBOL", ",")
+            else:
+                raise SyntaxError(f"Campo inválido no cabeçalho do grupo: {self.current_token}")
+        self.expect("SYMBOL", "]")  # Fechamento do cabeçalho
+
+        # Verifica se há registros
+        dados = []
+        if self.current_token and self.current_token.value == ",":
+            self.expect("SYMBOL", ",")  # Vírgula antes dos registros
+
+            # Parse dos registros
+            while self.current_token and self.current_token.value != ")":
+                self.expect("SYMBOL", "[")
+                registro = []
+                while self.current_token and self.current_token.value != "]":
+                    if self.current_token.type in ("STRING", "NUMBER"):
+                        registro.append(self.current_token.value.strip('"') if self.current_token.type == "STRING" else self.current_token.value)
+                        self.expect(self.current_token.type)
+                        if self.current_token and self.current_token.value == ",":
+                            self.expect("SYMBOL", ",")
+                    else:
+                        raise SyntaxError(f"Valor inválido no registro do grupo: {self.current_token}")
+                self.expect("SYMBOL", "]")  # Fechamento do registro
+
+                dados.append(registro)
+
+                if self.current_token and self.current_token.value == ",":
+                    self.expect("SYMBOL", ",")
+
+        self.expect("SYMBOL", ")")  # Fechamento do GRUPO
+        return {"campos": campos, "dados": dados}
+
 
     # ---------------------------------------------------------
     #  PARSE DE STATEMENTS
     # ---------------------------------------------------------
     def parse_statement(self):
-        # Identifica o tipo de statement pelo token atual. Se não bater, pau.
+        # Identifica o tipo de statement pelo token atual
         if self.current_token.type == "IDENTIFIER":
-            # Atribuição: var = valor.
+            # Atribuição direta no formato: variavel = valor.
             nome = self.current_token.value
             self.expect("IDENTIFIER")
             self.expect("ASSIGN")
@@ -217,6 +306,7 @@ class Parser:
 
         raise SyntaxError(f"Comando desconhecido: {self.current_token}")
 
+
     def parse_enquanto(self):
         # "ENQUANTO cond FAÇA. ... FIM ENQUANTO."
         self.expect("KEYWORD", "ENQUANTO")
@@ -238,20 +328,53 @@ class Parser:
     # ---------------------------------------------------------
     #  EXPRESSÕES
     # ---------------------------------------------------------
-    # Lê algo que pode ser NUMBER ou IDENTIFIER, e pode ter operador no meio.
+    # Lê algo que pode ser NUMBER ou IDENTIFIER, e pode ter operador no meio,permite o suporte a LISTA e GRUPO
     def parse_expression(self):
         left = self.current_token.value
+        
+        # Aceitamos NUMBER ou IDENTIFIER como início de expressão
         if self.current_token.type in ("NUMBER", "IDENTIFIER"):
             self.expect(self.current_token.type)
-            # Se tiver operador, bora montar {left, operator, right}
+
+            # Se detectar "[", é acesso a índice em LISTA (ou GRUPO)
+            if self.current_token and self.current_token.value == "[":
+                self.expect("SYMBOL", "[")
+                indice = self.current_token.value
+                self.expect("NUMBER")
+                self.expect("SYMBOL", "]")
+
+                # Lookahead para verificar se realmente é acesso de campo (GRUPO) 
+                # ou se o "." é apenas final de instrução
+                if (
+                    self.current_token 
+                    and self.current_token.value == "." 
+                    and (self.index + 1 < len(self.tokens)) 
+                    and self.tokens[self.index + 1].type == "IDENTIFIER"
+                ):
+                    # Se próximo token for IDENTIFIER, então é acesso a campo
+                    self.expect("SYMBOL", ".")
+                    campo = self.current_token.value
+                    self.expect("IDENTIFIER")
+                    return {"acesso_grupo": {"nome": left, "indice": indice, "campo": campo}}
+                else:
+                    # Senão, retorne só o acesso de lista
+                    return {"acesso_lista": {"nome": left, "indice": indice}}
+
+            # Se ainda tiver operador (ex.: 5 + 3 ou x - y), montamos a expressão
             if self.current_token and self.current_token.type == "OPERATOR":
                 operator = self.current_token.value
                 self.expect("OPERATOR")
                 right = self.current_token.value
                 self.expect(self.current_token.type)
                 return {"left": left, "operator": operator, "right": right}
+
+            # Se não for acesso a lista/grupo nem operador, retorna o valor simples
             return left
+
+        # Se cair aqui, o token não era NUMBER nem IDENTIFIER
         raise SyntaxError(f"Expressão inválida: {self.current_token}")
+
+
 
     def parse_se(self):
         # "SE condicao ENTAO. ... SENAO. ... FIM SE."
@@ -318,11 +441,20 @@ if __name__ == "__main__":
     INICIO PROGAMA TESTE_MODULOS.
     variavel nome tipo texto
     variavel idade tipo inteiro
+    variavel lista_numeros tipo lista = [10, 20, 30, 40, 50]
+    variavel grupo_pessoas tipo grupo = GRUPO(
+        ["NOME", "FUNCAO", "IDADE"],
+        ["joao", "administrador", 15],
+        ["vitor", "supervisor", 16],
+        ["sandro", "operador", 19]
+    )
 
     IMPLEMENTACAO PROGAMA TESTE_MODULOS.
     PRINCIPAL.
     pergunte("Qual o seu nome?" {nome}).
     pergunte("Qual a sua idade?" {idade}).
+    escreva("Primeiro número da lista: {lista_numeros[0]}").
+    escreva("Nome da segunda pessoa no grupo: {grupo_pessoas[1].NOME}").
     EXECUTAR MODULO SAUDACAO.
     EXECUTAR MODULO VERIFICA_IDADE.
     FIM PRINCIPAL.
@@ -364,3 +496,4 @@ if __name__ == "__main__":
         json.dump(ast, json_file, indent=4, ensure_ascii=False)
 
     print(f"AST salva no arquivo: {file_name}")
+

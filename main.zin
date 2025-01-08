@@ -1,29 +1,17 @@
-INICIO PROGAMA CALCULADORA.
-variavel numero1 tipo inteiro
-variavel numero2 tipo inteiro
-variavel resultado tipo inteiro
+INICIO PROGAMA TESTE_ENQUANTO_LISTA.
+variavel lista_valores tipo lista = [2, 4, 6, 8, 10]
+variavel i tipo inteiro
 
-IMPLEMENTACAO PROGAMA CALCULADORA.
+IMPLEMENTACAO PROGAMA TESTE_ENQUANTO_LISTA.
 PRINCIPAL.
-pergunte("Digite o primeiro número:" {numero1}).
-pergunte("Digite o segundo número:" {numero2}).
-EXECUTAR MODULO OPERACOES.
-escreva("O cálculo foi concluído.").
-FIM PRINCIPAL.
+    ENQUANTO i < 5 FAÇA.
+        escreva("Valor na posicao {i}: {lista_valores[i]}").
+        i = i + 1.
+    FIM ENQUANTO.
 
-MODULO OPERACOES.
-funcao calcular(numero1, numero2)
-    SE numero1 > numero2 ENTAO.
-        resultado = numero1 - numero2.
-        escreva("O resultado é {resultado}.").
-    SENAO.
-        resultado = numero1 + numero2.
-        escreva("O resultado é {resultado}.").
-    FIM SE.
-retorne resultado.
-FIM MODULO.
+    FIM PRINCIPAL.
 
-EXECUCAO PROGAMA CALCULADORA.
+EXECUCAO PROGAMA TESTE_ENQUANTO_LISTA.
 EXECUTAR PRINCIPAL.
 
-FIM PROGAMA CALCULADORA.
+FIM PROGAMA TESTE_ENQUANTO_LISTA.

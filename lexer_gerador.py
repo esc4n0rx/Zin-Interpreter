@@ -11,16 +11,17 @@ class Lexer:
     keywords = {
         'INICIO', 'FIM', 'PROGAMA', 'IMPLEMENTACAO', 'EXECUCAO', 'PRINCIPAL', 
         'MODULO', 'variavel', 'tipo', 'escreva', 'pergunte', 'EXECUTAR', 
-        'SE', 'SENAO', 'ENQUANTO', 'FAÇA', 'ENTAO', 'funcao', 'retorne'
+        'SE', 'SENAO', 'ENQUANTO', 'FAÇA', 'ENTAO', 'funcao', 'retorne', 
+        'GRUPO'
     }
 
     # Tipos que fingimos que sabemos lidar.
-    types = {'inteiro', 'texto', 'decimal', 'booleano', 'lista'}
+    types = {'inteiro', 'texto', 'decimal', 'booleano', 'lista','grupo'}
 
     # Regras de expressões regulares, porque aqui é onde a gente tenta domar o caos.
     t_ASSIGN = r'='
     t_OPERATOR = r'\+|\-|\*|/|>=|<=|==|!=|>|<'
-    t_SYMBOL = r'[{}().,]'
+    t_SYMBOL = r'[{}().,\[\]]'
     t_STRING = r'\".*?\"|\'.*?\''
     t_ignore = ' \t'  # Porque espaço e tab são lixo que a gente não quer enxergar.
 
@@ -30,6 +31,11 @@ class Lexer:
         t.value = float(t.value) if '.' in t.value else int(t.value)
         return t
 
+
+    def t_COMMENT(self, t):
+        r'\#.*'
+        pass
+    
     # Identificadores, que podem acabar virando KEYWORD ou TYPE se nos der na telha.
     def t_IDENTIFIER(self, t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
@@ -64,23 +70,21 @@ class Lexer:
 # Teste do Lexer com PLY pra ver se quebra ou não.
 if __name__ == "__main__":
     # Não me venha dizer que esse código não é lindo. Ele funciona, e é isso que importa.
+    # Teste com LISTA e GRUPO
     code = """
-    MODULO SAUDACAO.
-        funcao cumprimenta(nome)
-            escreva("Olá {nome}, seja bem-vindo!").
-        retorne null.
-    FIM MODULO.
-
-    IMPLEMENTACAO PROGAMA.
-    PRINCIPAL.
-        EXECUTAR MODULO SAUDACAO.cumprimenta("João").
-    FIM PRINCIPAL.
+    variavel lista_numeros tipo lista = [1, 2, 3, 4, 5].
+    variavel grupo_pessoas tipo grupo = GRUPO(
+        ["NOME", "FUNCAO", "IDADE"],
+        ["joao", "administrador", 15],
+        ["vitor", "supervisor", 16],
+        ["sandro", "operador", 19]
+    ).
+    escreva("Nome da primeira pessoa: {grupo_pessoas[0].NOME}").
     """
 
     lexer = Lexer()
     lexer.build()
     tokens = lexer.tokenize(code)
 
-    # Mostra os tokens. E a gente contempla a beleza do resultado ou a bagunça.
     for token in tokens:
         print(token)
