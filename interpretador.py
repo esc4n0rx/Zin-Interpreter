@@ -1,37 +1,35 @@
 import json
 import os
+import sys
+import re
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from lexer_gerador import Lexer
 from parser_gerador import Parser
-import sys
-
-# Meu Deus, pra que tanta importação? Eu só queria um café...
-# Mas ok, vamos fingir que somos profissionais.
 
 class Interpretador:
     def __init__(self, arquivo_zin):
-        # Esperando que esse arquivo_zin não seja o barulho que o motor do meu pc faz
         self.arquivo_zin = arquivo_zin
-        self.contexto = {}  # Onde guardo as variáveis, ou seja, bagunça organizada
-        self.modulos = {}   # Módulos, tipo um DLC do jogo
-        self.pilha_contexto = []  # Porque empilhar contexto me faz sentir jogador de Tetris
+        self.contexto = {}       # Dicionário geral onde guardamos variáveis
+        self.modulos = {}        # Dicionário com módulos (chaves = nome do módulo, valor = AST do módulo)
+        self.pilha_contexto = [] # Pilha para contextos de função, se necessário
 
     def processar_arquivo(self):
-        # Aqui eu tento ler o arquivo. Espero que ele exista... se não, tchau.
+        """Gera (se necessário) a AST em JSON e carrega para self.ast."""
         if not os.path.exists(self.arquivo_zin):
             raise FileNotFoundError(f"Arquivo {self.arquivo_zin} não encontrado.")
 
-        # Pegar nome base sem extensão, igual quando a gente corta a borda do pão
         nome_programa = os.path.splitext(os.path.basename(self.arquivo_zin))[0]
         arquivo_json = f"{nome_programa}.json"
 
-        # Se não tiver json, bora gerar na marra... #TeamGeradorDeAST
         if not os.path.exists(arquivo_json):
             print("Gerando AST...")
             with open(self.arquivo_zin, "r", encoding="utf-8") as arquivo:
                 codigo = arquivo.read()
 
             lexer = Lexer()
-            lexer.build()  # Isso aqui faz magia negra? Nem sei, mas deixa rolar
+            lexer.build()
             tokens = lexer.tokenize(codigo)
 
             parser = Parser(tokens)
@@ -41,60 +39,65 @@ class Interpretador:
                 json.dump(ast, arquivo_json_out, indent=4, ensure_ascii=False)
             print(f"AST salva no arquivo: {arquivo_json}")
 
-        # Senão, bora pular essa parte. A gente não gosta de trabalho repetido.
         with open(arquivo_json, "r", encoding="utf-8") as arquivo_json_in:
             self.ast = json.load(arquivo_json_in)
-            # Carregamos a AST e temos um lindo dicionário gigante. Felicidade ou caos?
 
     def executar(self):
-        # Esperamos que a AST tenha "programa". Senão, boa sorte, fiasco total.
+        """Ponto de entrada da execução do programa."""
         if "programa" not in self.ast:
-            raise ValueError("AST inválida: estrutura do programa não encontrada.")
+            raise ValueError("AST inválida: não tem chave 'programa'.")
 
         programa = self.ast["programa"]
         print(f"Executando programa: {programa['nome']}")
 
-        # Inicializa variáveis com None, tipo um teste cego
+        # Inicializa as variáveis definidas em 'variaveis' , simples e direto
         for var_info in programa["variaveis"]:
             var_nome = var_info["nome"]
             var_tipo = var_info["tipo"]
 
-            # Se for lista, converte 'valores' em lista Python
+            # Se for lista, convertemos os valores para uma lista Python
             if var_tipo == "lista":
-                valores_crus = var_info.get("valores", [])  # lista de strings/números
                 lista_python = []
-                for item in valores_crus:
-                    # Se item for string e contiver só dígitos, converta pra int
+                for item in var_info.get("valores", []):
+                    # Se for string só de dígitos, convertemos para int
                     if isinstance(item, str) and item.isdigit():
                         lista_python.append(int(item))
                     else:
                         lista_python.append(item)
                 self.contexto[var_nome] = lista_python
 
-            # Se for grupo, você pode montar um dicionário com "campos" e "dados"
+            # Se for grupo, guardamos como dict com {campos, dados}
             elif var_tipo == "grupo":
-                grupo_valores = var_info.get("valores", {})
-                # Ex: grupo_valores = {"campos": [...], "dados": [...]}
-                # Aqui você guarda esse dicionário no contexto
-                self.contexto[var_nome] = grupo_valores
+                self.contexto[var_nome] = var_info.get("valores", {})
 
-            # Caso contrário, inicialize com None (variáveis simples)
+            # Variáveis simples = None de início
             else:
                 self.contexto[var_nome] = None
 
-        self.modulos = programa["implementacao"].get("modulos", {})
+        # Carrega módulos da AST (se existirem),se nao existir ferrou
+        implementacao = programa.get("implementacao", {})
+        self.modulos = implementacao.get("modulos", {})
 
-        # Tem um campo de execução, então bora processar
+
+        if "importes" in programa:
+            for imp_item in programa["importes"]:
+                # Cada imp_item = {"importe": "zin_math"}
+                self.interpretar_importe(imp_item)
+
+        # Executa o que estiver em 'execucao'
         if "execucao" in programa:
             for modulo in programa["execucao"]["modulos"]:
                 if modulo.lower() == "principal":
-                    self.executar_principal(programa["implementacao"]["principal"])
+                    # Executar bloco principal
+                    principal = implementacao["principal"]
+                    self.executar_principal(principal)
                 elif modulo in self.modulos:
+                    # Executar módulo
                     self.executar_modulo(modulo)
-                # Se não existir, a gente ignora... ou faz drama
+                # Caso contrário, ignora ou avisa.
 
     def executar_principal(self, comandos):
-        # Meu playground de comandos
+        """Executa os comandos de um bloco (por exemplo, principal)."""
         for comando in comandos:
             if "atribuir" in comando:
                 self.interpretar_atribuicao(comando)
@@ -109,84 +112,133 @@ class Interpretador:
             elif "executar_modulo" in comando:
                 self.executar_modulo(comando["executar_modulo"])
             elif "acesso_lista" in comando:
-                valor = self.acessar_lista(comando)
-                print(valor)  # Exemplo de como usar o valor
+                valor = self.avaliar_expressao(comando)  
+                print(valor)
             elif "acesso_grupo" in comando:
-                valor = self.acessar_grupo(comando)
-                print(valor)  # Exemplo de como usar o valor
+                valor = self.avaliar_expressao(comando)  
+                print(valor)
+            elif "importe" in comando:
+                self.interpretar_importe(comando)
 
-
-            # Fim do if. E a gente reza pra nada dar erro
-
+    # -------------------------------------------------
+    # Atribuição
+    # -------------------------------------------------
     def interpretar_atribuicao(self, comando):
-        variavel = comando["atribuir"]["variavel"]
-        valor = comando["atribuir"]["valor"]
+        """
+        Exemplo de comando:
+        {
+          "atribuir": {
+            "variavel": "resultado_raiz",
+            "valor": { ... AST de expressão ... }
+          }
+        }
+        """
+        var_nome = comando["atribuir"]["variavel"]
+        expr_ast = comando["atribuir"]["valor"]
 
-        if isinstance(valor, dict) and "acesso_lista" in valor:
-            valor = self.acessar_lista(valor)
-        elif isinstance(valor, dict) and "acesso_grupo" in valor:
-            valor = self.acessar_grupo(valor)
-        elif isinstance(valor, dict) and "left" in valor:
-            left = self.contexto.get(valor["left"], valor["left"])
-            right = self.contexto.get(valor["right"], valor["right"])
-            operator = valor["operator"]
-            if operator == "+":
-                valor = int(left) + int(right)
-            elif operator == "-":
-                valor = int(left) - int(right)
-            elif operator == "*":
-                valor = int(left) * int(right)
-            elif operator == "/":
-                valor = int(left) // int(right)
+        valor_calculado = self.avaliar_expressao(expr_ast)
+        self.contexto[var_nome] = valor_calculado
 
-        self.contexto[variavel] = valor
-
-
+    # -------------------------------------------------
+    # Escreva
+    # -------------------------------------------------
     def interpretar_escreva(self, comando):
+        """
+        comando = {"escreva": "Mensagem com {variavel} etc."}
+        Substitui placeholders por valores do self.contexto ou faz parsing se precisar.
+        """
         texto = comando["escreva"]
+
+        # Substitui {variavel} simples (se for igual ao nome no contexto)
         for variavel, valor in self.contexto.items():
             texto = texto.replace(f"{{{variavel}}}", str(valor) if valor is not None else "null")
 
-        # Verifica se há acessos diretos a LISTA ou GRUPO
-        while "{" in texto and "}" in texto:
-            inicio = texto.index("{")
-            fim = texto.index("}") + 1
-            placeholder = texto[inicio:fim]
-            chave = placeholder[1:-1]  # Remove as chaves {}
-            
-            # Processa acessos a LISTA ou GRUPO
-            if "." in chave or "[" in chave:
-                partes = chave.split(".")
-                nome = partes[0]
-                if "[" in nome:
-                    lista_nome, indice = nome.split("[")
-                    indice = int(indice[:-1])  # Remove o ']'
-                    valor = self.acessar_lista({"acesso_lista": {"nome": lista_nome, "indice": indice}})
-                if len(partes) > 1:
-                    campo = partes[1]
-                    valor = self.acessar_grupo({"acesso_grupo": {"nome": lista_nome, "indice": indice, "campo": campo}})
-                texto = texto.replace(placeholder, str(valor))
+        # Se ainda restam placeholders complexos (ex.: {lista[0].campo}), 
+        padrao = r"\{([^{}]+)\}"
+        # Encontra todos { ... }
+        matches = re.findall(padrao, texto)
+
+        for m in matches:
+            # m = "algo" dentro de {algo}
+            # Verifica se tem '.' ou '[ ]'
+            if "." in m or "[" in m:
+                # Tenta acessar via AST:
+                valor_dinamico = self.avaliar_placeholder_dinamico(m)
+                placeholder_str = f"{{{m}}}"
+                texto = texto.replace(placeholder_str, str(valor_dinamico))
             else:
-                texto = texto.replace(placeholder, str(self.contexto.get(chave, "null")))
+                # Se não tiver '.', assume que é uma var normal
+                placeholder_str = f"{{{m}}}"
+                texto = texto.replace(placeholder_str, str(self.contexto.get(m, "null")))
 
         print(texto)
 
+    def avaliar_placeholder_dinamico(self, expressao_str):
+        """
+        Exemplo:
+         - "lista_numeros[0]"
+         - "grupo_pessoas[1].NOME"
+        Vamos criar um dict de AST rápido e chamar avaliar_expressao.
+        """
+        # Simplificado: suponde que a sintaxe seja algo como "nome[índice].campo"
+        # Precisaríamos de um parser real, mas aqui vou fazer parsing manual básico.
 
+        # 1) Se tiver '.', dividimos a parte da lista e do campo
+        if "." in expressao_str:
+            parte_lista, campo = expressao_str.split(".", 1)  # ex: "grupo_pessoas[1]" e "NOME"
+            nome_lista, indice = self.extrair_lista(parte_lista)  # ex: "grupo_pessoas", "1"
+            ast_grupo = {
+                "acesso_grupo": {
+                    "nome": nome_lista,
+                    "indice": int(indice),
+                    "campo": campo
+                }
+            }
+            return self.avaliar_expressao(ast_grupo)
+        else:
+            # Sem '.', então deve ser só "lista[0]"
+            nome_lista, indice = self.extrair_lista(expressao_str)
+            ast_lista = {
+                "acesso_lista": {
+                    "nome": nome_lista,
+                    "indice": int(indice)
+                }
+            }
+            return self.avaliar_expressao(ast_lista)
+
+    def extrair_lista(self, texto):
+        """
+        Recebe algo tipo "lista_numeros[0]" e retorna ("lista_numeros", "0").
+        Simples parse manual: tudo antes do '[' e tudo dentro do '[]'
+        """
+        if "[" not in texto or "]" not in texto:
+            return (texto, 0)  # fallback
+
+        nome, resto = texto.split("[", 1)
+        indice_str = resto.split("]", 1)[0]
+        return (nome, indice_str)
+
+    # -------------------------------------------------
+    # Pergunte
+    # -------------------------------------------------
     def interpretar_pergunte(self, comando):
-        # Este aqui é pra fazer input, porque a vida já não é complicada o bastante
         texto = comando["pergunte"]["texto"]
         variavel = comando["pergunte"]["variavel"]
         resposta = input(f"{texto} ")
-        # Vou fingir que o usuário não digita nada absurdo
         if variavel in self.contexto:
+            # Se variável já for int, tenta converter
             if isinstance(self.contexto[variavel], int):
-                # Tentar converter pra int, se der ruim, paciência
-                self.contexto[variavel] = int(resposta)
+                try:
+                    self.contexto[variavel] = int(resposta)
+                except ValueError:
+                    self.contexto[variavel] = resposta
             else:
                 self.contexto[variavel] = resposta
 
+    # -------------------------------------------------
+    # SE
+    # -------------------------------------------------
     def interpretar_se(self, comando):
-        # O famoso if (ou "se"): se isso, faz aquilo, senão, faz banana
         condicao = comando["condicao"]
         bloco_se = comando["bloco_se"]
         bloco_senao = comando.get("bloco_senao", [])
@@ -195,147 +247,228 @@ class Interpretador:
 
         if resultado:
             self.executar_principal(bloco_se)
-        elif bloco_senao:
+        else:
             self.executar_principal(bloco_senao)
 
+    def avaliar_condicao(self, condicao_ast):
+        """
+        Normalmente, condicao_ast poderia ser algo como:
+        {"left": "idade", "operator": ">=", "right": 18}
+        """
+        # Podemos reutilizar avaliar_expressao se quisermos suportar expressões mais complexas.
+        # A diferença é que condicao_ast tem 'operator' que seja de comparação.
+        val = self.avaliar_expressao(condicao_ast)
+        # Se a expressão binária retornar True/False, ótimo. Se retornar um valor numérico,deu ruim 
+        return bool(val)
+
+    # -------------------------------------------------
+    # ENQUANTO
+    # -------------------------------------------------
     def interpretar_enquanto(self, comando):
-        # Laço while, cuidado pra não virar loop infinito e travar tudo
         condicao = comando["condicao"]
         bloco = comando["bloco"]
 
-        while self.avaliar_condicao(condicao):
+        while True:
+            teste = self.avaliar_condicao(condicao)
+            if not teste:
+                break
             self.executar_principal(bloco)
 
+    # -------------------------------------------------
+    # IMPORTAR MÓDULOS
+    # -------------------------------------------------
+    def interpretar_importe(self, comando):
+        nome_modulo = comando["importe"]
+        try:
+            modulo = __import__(f"libs.{nome_modulo}", fromlist=["*"])
+            self.contexto[nome_modulo] = modulo
+            print(f"Módulo '{nome_modulo}' importado com sucesso.")
+        except ImportError:
+            raise ImportError(f"Erro ao importar o módulo '{nome_modulo}'. Verifique se existe em 'libs'.")
 
-    def acessar_lista(self, comando):
-        nome_lista = comando["acesso_lista"]["nome"]
-        indice = comando["acesso_lista"]["indice"]
+    # -------------------------------------------------
+    # Execução de módulos
+    # -------------------------------------------------
+    def executar_modulo(self, nome_modulo):
+        if nome_modulo not in self.modulos:
+            raise ValueError(f"Módulo '{nome_modulo}' não encontrado na AST.")
+        funcoes = self.modulos[nome_modulo]
+        for func in funcoes:
+            self.executar_funcao(func)
+
+    def executar_funcao(self, funcao):
+        """
+        funcao = {
+          "nome": "...",
+          "parametros": [...],
+          "corpo": [...],
+          "retorno": ...
+        }
+        """
+        nome_funcao = funcao["nome"]
+        parametros = funcao["parametros"]
+        corpo = funcao["corpo"]
+        retorno_ast = funcao["retorno"]
+
+        # Cria um contexto local copiando do global
+        contexto_local = dict(self.contexto)
+        self.pilha_contexto.append(self.contexto)
+        self.contexto = contexto_local
+
+        # Inicializa parâmetros com None se não existirem
+        for p in parametros:
+            if p not in self.contexto:
+                self.contexto[p] = None
+
+        print(f"Executando função: {nome_funcao}")
+
+        self.executar_principal(corpo)
+        resultado = self.avaliar_expressao(retorno_ast)
+
+        # Restaura contexto anterior
+        self.contexto = self.pilha_contexto.pop()
+
+        return resultado
+
+    # -------------------------------------------------
+    # Avaliação de Expressões (coração do interpretador)
+    # -------------------------------------------------
+    def avaliar_expressao(self, expr):
+        """
+        Avalia recursivamente o nó da AST de 'expr' e retorna o valor real (int, float, str etc.).
+        """
+
+        # 1) Se for literal numérico
+        if isinstance(expr, (int, float)):
+            return expr
+
+        # 2) Se for string, pode ser uma variável no contexto
+        if isinstance(expr, str):
+            return self.contexto.get(expr, expr)
+
+        # 3) Se for dicionário, analisamos cada tipo possível
+        if isinstance(expr, dict):
+            # a) chamada_modulo
+            if "chamada_modulo" in expr:
+                return self.executar_chamada_modulo(expr["chamada_modulo"])
+
+            # b) acesso_lista
+            if "acesso_lista" in expr:
+                return self.avaliar_acesso_lista(expr["acesso_lista"])
+
+            # c) acesso_grupo
+            if "acesso_grupo" in expr:
+                return self.avaliar_acesso_grupo(expr["acesso_grupo"])
+
+            # d) expressão binária (left, operator, right)
+            if "left" in expr and "operator" in expr and "right" in expr:
+                left_val = self.avaliar_expressao(expr["left"])
+                right_val = self.avaliar_expressao(expr["right"])
+                op = expr["operator"]
+
+                # Converte se for string numérica
+                if isinstance(left_val, str) and left_val.isdigit():
+                    left_val = int(left_val)
+                if isinstance(right_val, str) and right_val.isdigit():
+                    right_val = int(right_val)
+
+                if op == "+": return left_val + right_val
+                if op == "-": return left_val - right_val
+                if op == "*": return left_val * right_val
+                if op == "/": return left_val // right_val
+                if op == "==": return left_val == right_val
+                if op == "!=": return left_val != right_val
+                if op == ">": return left_val > right_val
+                if op == "<": return left_val < right_val
+                if op == ">=": return left_val >= right_val
+                if op == "<=": return left_val <= right_val
+                raise ValueError(f"Operador não suportado: {op}")
+
+        # 4) Se nada se encaixa, erro
+        raise ValueError(f"Expressão inválida: {expr}")
+
+    def executar_chamada_modulo(self, info):
+        """
+        info = {
+          "modulo": "zin_math",
+          "funcao": "raiz_quadrada",
+          "argumentos": [ ... AST ... ]
+        }
+        """
+        nome_modulo = info["modulo"]
+        nome_funcao = info["funcao"]
+        args_ast = info["argumentos"]
+
+        # Avalia cada argumento
+        args_val = [self.avaliar_expressao(a) for a in args_ast]
+
+        if nome_modulo not in self.contexto:
+            raise ValueError(f"Módulo '{nome_modulo}' não foi importado ou não está no contexto.")
+
+        modulo_obj = self.contexto[nome_modulo]
+
+        if not hasattr(modulo_obj, nome_funcao):
+            raise ValueError(f"Função '{nome_funcao}' não encontrada no módulo '{nome_modulo}'.")
+
+        func = getattr(modulo_obj, nome_funcao)
+        resultado = func(*args_val)
+        return resultado
+
+    def avaliar_acesso_lista(self, acesso):
+        """
+        acesso = {
+          "nome": "lista_numeros",
+          "indice": expr (pode ser int ou AST)
+        }
+        """
+        nome_lista = acesso["nome"]
+        indice_ast = acesso["indice"]
+        indice_val = self.avaliar_expressao(indice_ast) if isinstance(indice_ast, dict) else indice_ast
 
         if nome_lista not in self.contexto or not isinstance(self.contexto[nome_lista], list):
             raise ValueError(f"'{nome_lista}' não é uma lista válida.")
 
-        if indice < 0 or indice >= len(self.contexto[nome_lista]):
-            raise IndexError(f"Índice '{indice}' fora do intervalo para a lista '{nome_lista}'.")
+        if not isinstance(indice_val, int):
+            raise ValueError(f"Índice '{indice_val}' não é inteiro para a lista '{nome_lista}'.")
 
-        return self.contexto[nome_lista][indice]
-    
+        lista = self.contexto[nome_lista]
+        if indice_val < 0 or indice_val >= len(lista):
+            raise IndexError(f"Índice '{indice_val}' fora do intervalo para a lista '{nome_lista}'.")
 
+        return lista[indice_val]
 
-    def acessar_grupo(self, comando):
-        nome_grupo = comando["acesso_grupo"]["nome"]
-        indice = comando["acesso_grupo"]["indice"]
-        campo = comando["acesso_grupo"]["campo"]
+    def avaliar_acesso_grupo(self, acesso):
+        """
+        acesso = {
+          "nome": "grupo_pessoas",
+          "indice": expr (pode ser int ou AST),
+          "campo": "FUNCAO"  (por exemplo)
+        }
+        """
+        nome_grupo = acesso["nome"]
+        indice_ast = acesso["indice"]
+        campo = acesso["campo"]
+
+        indice_val = self.avaliar_expressao(indice_ast) if isinstance(indice_ast, dict) else indice_ast
 
         if nome_grupo not in self.contexto or not isinstance(self.contexto[nome_grupo], dict):
             raise ValueError(f"'{nome_grupo}' não é um grupo válido.")
 
         grupo = self.contexto[nome_grupo]
-        if indice < 0 or indice >= len(grupo["dados"]):
-            raise IndexError(f"Índice '{indice}' fora do intervalo para o grupo '{nome_grupo}'.")
+        campos = grupo.get("campos", [])
+        dados = grupo.get("dados", [])
 
-        campos = grupo["campos"]
+        if not isinstance(indice_val, int) or indice_val < 0 or indice_val >= len(dados):
+            raise IndexError(f"Índice '{indice_val}' fora do intervalo para o grupo '{nome_grupo}'.")
+
         if campo not in campos:
             raise ValueError(f"Campo '{campo}' não encontrado no grupo '{nome_grupo}'.")
 
         campo_index = campos.index(campo)
-        return grupo["dados"][indice][campo_index]
-
-
-    
-
-    def avaliar_condicao(self, condicao):
-        # Verificar se left e right estão no contexto ou se são literais
-        left = self.contexto.get(condicao["left"], condicao["left"])
-        right = self.contexto.get(condicao["right"], condicao["right"])
-
-        # Tentar converter se for dígito. Se não for, paciência
-        if isinstance(left, str) and left.isdigit():
-            left = int(left)
-        if isinstance(right, str) and right.isdigit():
-            right = int(right)
-
-        operator = condicao["operator"]
-
-        # Comparações básicas: ==, !=, >, < etc. Tomara que a gente não quebre nada
-        if operator == "==":
-            return left == right
-        elif operator == "!=":
-            return left != right
-        elif operator == ">":
-            return left > right
-        elif operator == "<":
-            return left < right
-        elif operator == ">=":
-            return left >= right
-        elif operator == "<=":
-            return left <= right
-        # Se não for nenhum desses, me deixa em paz
-        raise ValueError(f"Operador inválido: {operator}")
-
-    def executar_modulo(self, nome_modulo):
-        # Hora de rodar o(s) módulo(s). Tipo DLC do jogo, lembrei de novo
-        if nome_modulo not in self.modulos:
-            raise ValueError(f"Módulo {nome_modulo} não encontrado.")
-
-        funcoes = self.modulos[nome_modulo]
-        for funcao in funcoes:
-            self.executar_funcao(funcao)
-
-    def executar_funcao(self, funcao):
-        # Função com nome, parâmetros, corpo e retorno. Basicamente um mini-sistema solar
-        nome_funcao = funcao["nome"]
-        parametros = funcao["parametros"]
-        corpo = funcao["corpo"]
-        retorno = funcao["retorno"]
-
-        # Clona contexto atual (tipo ctrl+c ctrl+v)
-        contexto_local = dict(self.contexto)
-
-        self.pilha_contexto.append(self.contexto)
-        # Pilha de contextos, só pra complicar a vida
-
-        self.contexto = contexto_local
-
-        # Se não tiver valor pros params, bota None, que é pra ficar confuso
-        for param in parametros:
-            if param not in self.contexto:
-                self.contexto[param] = None
-
-        print(f"Executando função: {nome_funcao} com contexto: {self.contexto}")
-        # #DomingãoDoDev
-
-        self.executar_principal(corpo)
-
-        resultado = self.avaliar_expressao(retorno)
-
-        self.contexto = self.pilha_contexto.pop()
-
-        return resultado
-
-    def avaliar_expressao(self, expressao):
-        # Faz a conta com base no dicionário mágico
-        if isinstance(expressao, dict):
-            left = self.contexto.get(expressao["left"], expressao["left"])
-            right = self.contexto.get(expressao["right"], expressao["right"])
-            operator = expressao["operator"]
-            if operator == "+":
-                return int(left) + int(right)
-            elif operator == "-":
-                return int(left) - int(right)
-            elif operator == "*":
-                return int(left) * int(right)
-            elif operator == "/":
-                return int(left) // int(right)
-        elif isinstance(expressao, str):
-            return self.contexto.get(expressao, expressao)
-        elif isinstance(expressao, int):
-            return expressao
-        # Se não entrou nos casos, a gente desiste
-        raise ValueError(f"Expressão inválida: {expressao}")
+        return dados[indice_val][campo_index]
 
 
 if __name__ == "__main__":
-    # Ponto de partida do script, onde a magia começa (ou não)
     if len(sys.argv) < 2:
         print("Uso: python interpretador.py <arquivo_zin>")
         sys.exit(1)
@@ -344,4 +477,3 @@ if __name__ == "__main__":
     interpretador = Interpretador(arquivo_zin)
     interpretador.processar_arquivo()
     interpretador.executar()
-    # E no final do dia, só queremos que tudo funcione sem levantar exceções

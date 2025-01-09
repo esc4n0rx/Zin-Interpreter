@@ -1,17 +1,16 @@
-INICIO PROGAMA TESTE_ENQUANTO_LISTA.
-variavel lista_valores tipo lista = [2, 4, 6, 8, 10]
-variavel i tipo inteiro
+INICIO PROGAMA TESTE_IMPORT.
+importe zin_math.
 
-IMPLEMENTACAO PROGAMA TESTE_ENQUANTO_LISTA.
+variavel resultado_raiz tipo decimal
+
+IMPLEMENTACAO PROGAMA TESTE_IMPORT.
 PRINCIPAL.
-    ENQUANTO i < 5 FAÇA.
-        escreva("Valor na posicao {i}: {lista_valores[i]}").
-        i = i + 1.
-    FIM ENQUANTO.
+    resultado_raiz = zin_math.raiz_quadrada(49).
+    escreva("A raiz quadrada de 49 é: {resultado_raiz}").
 
-    FIM PRINCIPAL.
+FIM PRINCIPAL.
 
-EXECUCAO PROGAMA TESTE_ENQUANTO_LISTA.
+EXECUCAO PROGAMA TESTE_IMPORT.
 EXECUTAR PRINCIPAL.
 
-FIM PROGAMA TESTE_ENQUANTO_LISTA.
+FIM PROGAMA TESTE_IMPORT.
