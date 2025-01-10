@@ -1,124 +1,92 @@
-# Projeto Zin: Interpretador e Compilador
+# Zin - Linguagem de Programação Simples
 
-## Sobre o Projeto
-O **Zin** é uma linguagem de programação simples e em português, projetada para ensinar conceitos básicos de programação e lógica. O projeto inclui:
+Zin é uma linguagem de programação educacional criada para facilitar o aprendizado de lógica de programação e estrutura de código. Com sintaxe em português, Zin visa ser intuitiva e acessível para iniciantes.
 
-- **Lexer**: Para transformar o código-fonte em tokens.
-- **Parser**: Para gerar a AST (Abstract Syntax Tree) a partir dos tokens.
-- **Interpretador**: Para executar programas escritos em Zin.
+## Funcionalidades
 
-## Funcionalidades Implementadas
-### 1. Lexer
-O Lexer é responsável por identificar e categorizar os elementos do código-fonte. Ele suporta:
-- Palavras-chave como `INICIO`, `FIM`, `PROGAMA`, `PRINCIPAL`, `MODULO`, `EXECUTAR`.
-- Operadores lógicos e aritméticos (`+`, `-`, `*`, `/`, `>=`, `<=`, `==`, `!=`, `>`, `<`).
-- Identificadores, variáveis e tipos (`inteiro`, `texto`, `decimal`, etc.).
-- Strings delimitadas por aspas (`"..."` ou `"..."`).
-- Estruturas de controle como `SE`, `SENAO`, `ENQUANTO`.
+- **Variáveis e Tipos**: Suporte para variáveis de tipos como `inteiro`, `texto`, `decimal`, `lista` e `grupo`.
+- **Estruturas Condicionais**: `SE`, `SENAO`.
+- **Laços de Repetição**: `ENQUANTO`.
+- **Funções**: Definição e execução de funções customizadas.
+- **Modularidade**: Suporte a módulos e execução modular.
+- **Interatividade**: Funções como `pergunte` para entrada do usuário.
+- **Escreva**: Saída formatada com substituição dinâmica de variáveis.
+- **Manipulação de Listas e Grupos**: Trabalhe com índices, campos e valores de estruturas complexas.
+- **Importação de Módulos Externos**: Integre bibliotecas externas para expandir as funcionalidades. bibliotecas podem ser feitas em python.
+- **Novo Sistema de Comandos**:
+  - `zin -run main.zin`: Executa um arquivo Zin.
+  - `zin -version`: Mostra a versão atual da linguagem.
+  - `zin -create main.zin`: Cria um arquivo Zin com estrutura base.
 
-### 2. Parser
-O Parser transforma os tokens em uma AST, estruturando o programa. As principais funcionalidades são:
+## Instalação
 
-- **Declarações de Variáveis**:
-  ```
-  variavel nome tipo texto
-  variavel idade tipo inteiro
-  ```
-- **Estruturas de Controle**:
-  - `SE` e `SENAO`.
-  - `ENQUANTO`.
-- **Blocos de Implementação**:
-  ```
-  IMPLEMENTACAO PROGAMA TESTE.
-  ```
-- **Módulos e Funções**:
-  ```
-  MODULO EXEMPLO.
-  funcao soma(a, b)
-      retorne a + b.
-  FIM MODULO.
-  ```
-- **Execução**:
-  ```
-  EXECUCAO PROGAMA TESTE.
-  EXECUTAR MODULO EXEMPLO.
-  ```
+### Requisitos
+- **Python**: Certifique-se de que o Python está instalado em seu sistema.
+- **Git**: Necessário para clonar o repositório.
 
-### 3. Interpretador
-O Interpretador lê a AST gerada pelo Parser e executa o programa. Suporta:
-- Declaração e atribuição de variáveis.
-- Entrada e saída (`pergunte` e `escreva`).
-- Avaliação de expressões matemáticas e lógicas.
-- Execução de estruturas de controle (`SE`, `SENAO`, `ENQUANTO`).
-- Execução de módulos e funções com suporte a parâmetros e retorno.
+### Passos de Instalação
 
-## Exemplo de Programa em Zin
+1. **Baixe o Instalador**:
+   Execute o comando abaixo no PowerShell:
+   ```powershell
+   Invoke-WebRequest -Uri https://raw.githubusercontent.com/esc4n0rx/Zin-Interpreter/refs/heads/master/install_zin.ps1 -OutFile install_zin.ps1
+   ```
+2. **Execute o Instalador**:
+   No PowerShell, execute:
+   ```powershell
+   .\install_zin.ps1
+   ```
+
+3. **Siga as Instruções**:
+   O instalador irá:
+   - Verificar se o Python está instalado e oferecer para instalar caso não esteja.
+   - Verificar se o Git está instalado.
+   - Clonar o repositório do Zin.
+   - Configurar o executável `zin` no PATH do sistema.
+
+4. **Teste a Instalação**:
+   Após concluir, verifique a instalação executando:
+   ```powershell
+   zin -version
+   ```
+
+## Exemplos de Uso
+
+### Criar um Arquivo Base
+Crie um novo arquivo `.zin` com a estrutura básica:
+```bash
+zin -create meu_programa.zin
+```
+
+### Executar um Programa Zin
+Execute seu programa com:
+```bash
+zin -run meu_programa.zin
+```
+
+### Estrutura de um Programa
+Um exemplo simples de programa em Zin:
 ```zin
-INICIO PROGAMA TESTE.
+INICIO PROGAMA MEU_TESTE.
 variavel nome tipo texto
-variavel idade tipo inteiro
 
-IMPLEMENTACAO PROGAMA TESTE.
+IMPLEMENTACAO PROGAMA MEU_TESTE.
 PRINCIPAL.
     pergunte("Qual o seu nome?" {nome}).
-    pergunte("Qual a sua idade?" {idade}).
-    EXECUTAR MODULO SAUDACAO.
+    escreva("Olá, {nome}!").
 FIM PRINCIPAL.
 
-MODULO SAUDACAO.
-funcao cumprimenta(nome)
-    escreva("Olá {nome}, seja bem-vindo!").
-retorne null.
-FIM MODULO.
-
-EXECUCAO PROGAMA TESTE.
+EXECUCAO PROGAMA MEU_TESTE.
 EXECUTAR PRINCIPAL.
-FIM PROGAMA TESTE.
+
+FIM PROGAMA MEU_TESTE.
 ```
 
-### Comandos Suportados
-- **`pergunte`**: Solicita entrada do usuário.
-- **`escreva`**: Exibe mensagens no terminal.
-- **Estruturas de Controle**:
-  - `SE ... SENAO`.
-  - `ENQUANTO ... FAÇA`.
-- **Módulos e Funções**:
-  - Declaração de módulos com funções.
-  - Execução de módulos e funções com retorno de valores.
+## Contribuição
 
-## Estrutura do Projeto
-
-```
-/
-├── lexer.py          # Lexer para tokenização do código Zin
-├── parser.py         # Parser para geração da AST
-├── interpretador.py  # Interpretador para execução da AST
-├── README.md         # Documentação do projeto
-```
-
-## Como Executar
-
-### Pré-requisitos
-- Python 3.10 ou superior.
-
-### Executando o Interpretador
-1. Crie um arquivo com extensão `.zin` contendo seu programa.
-2. Rode o comando no terminal:
-   ```
-   python interpretador.py <nome_do_arquivo>.zin
-   ```
-
-Exemplo:
-```bash
-python interpretador.py TESTE.zin
-```
-
-## Próximos Passos
-- Melhorar a documentação com mais exemplos práticos.
-- Suporte a mais tipos de dados e operadores.
-
-## Contribuições
-Sinta-se à vontade para contribuir com melhorias! Faça um fork do repositório e envie suas sugestões.
+Contribuições são bem-vindas! Clone o repositório, faça alterações e envie um pull request.
 
 ## Licença
-Este projeto é livre para uso e modificação sob a licença MIT.
+
+Este projeto é licenciado sob a [MIT License](LICENSE).
+
