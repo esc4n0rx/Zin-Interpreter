@@ -1,0 +1,162 @@
+{
+    "programa": {
+        "nome": "ZIN_AVANCADO",
+        "variaveis": [
+            {
+                "nome": "contador",
+                "tipo": "inteiro"
+            },
+            {
+                "nome": "elevado",
+                "tipo": "decimal"
+            },
+            {
+                "nome": "input_valor",
+                "tipo": "inteiro"
+            },
+            {
+                "nome": "numeros",
+                "tipo": "lista",
+                "valores": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ]
+            },
+            {
+                "nome": "produtos",
+                "tipo": "grupo",
+                "valores": {
+                    "campos": [
+                        "NOME",
+                        "PRECO"
+                    ],
+                    "dados": [
+                        [
+                            "Caneta",
+                            1.5
+                        ],
+                        [
+                            "Lápis",
+                            0.8
+                        ],
+                        [
+                            "Borracha",
+                            2.0
+                        ]
+                    ]
+                }
+            }
+        ],
+        "implementacao": {
+            "principal": [
+                {
+                    "escreva": "=== Demonstração de LOOP PARA com lista ==="
+                },
+                {
+                    "tipo": "PARA",
+                    "var": "contador",
+                    "start": 0,
+                    "end": 4,
+                    "step": 1,
+                    "bloco": [
+                        {
+                            "escreva": "Elemento {contador} na lista: {numeros[contador]}"
+                        }
+                    ]
+                },
+                {
+                    "escreva": "=== Demonstração de LOOP REPITA ==="
+                },
+                {
+                    "tipo": "REPITA",
+                    "bloco": [
+                        {
+                            "pergunte": {
+                                "texto": "Digite 99 para encerrar o REPITA: ",
+                                "variavel": "input_valor"
+                            }
+                        }
+                    ],
+                    "condicao": {
+                        "left": "input_valor",
+                        "operator": "==",
+                        "right": 99
+                    }
+                },
+                {
+                    "escreva": "=== Demonstração de SE ... SENAO ==="
+                },
+                {
+                    "tipo": "SE",
+                    "condicao": {
+                        "left": {
+                            "acesso_lista": {
+                                "nome": "numeros",
+                                "indice": 0
+                            }
+                        },
+                        "operator": "==",
+                        "right": 1
+                    },
+                    "bloco_se": [
+                        {
+                            "escreva": "Primeiro item de 'numeros' é 1!"
+                        }
+                    ],
+                    "bloco_senao": [
+                        {
+                            "escreva": "Primeiro item de 'numeros' não é 1!"
+                        }
+                    ]
+                },
+                {
+                    "escreva": "=== Demonstração de chamada de função em módulo (zin_math) ==="
+                },
+                {
+                    "atribuir": {
+                        "variavel": "elevado",
+                        "valor": {
+                            "chamada_modulo": {
+                                "modulo": "zin_math",
+                                "funcao": "potencia",
+                                "argumentos": [
+                                    2,
+                                    10
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "escreva": "2 elevado a 10 é: {elevado}"
+                },
+                {
+                    "escreva": "=== Acessando dados do grupo 'produtos' ==="
+                },
+                {
+                    "escreva": "Primeiro produto: {produtos[0].NOME} = R$ {produtos[0].PRECO}"
+                },
+                {
+                    "escreva": "Segundo produto: {produtos[1].NOME} = R$ {produtos[1].PRECO}"
+                },
+                {
+                    "escreva": "Terceiro produto: {produtos[2].NOME} = R$ {produtos[2].PRECO}"
+                }
+            ],
+            "execucoes_apos_principal": []
+        },
+        "execucao": {
+            "modulos": [
+                "PRINCIPAL"
+            ]
+        },
+        "importes": [
+            {
+                "importe": "zin_math"
+            }
+        ]
+    }
+}

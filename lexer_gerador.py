@@ -1,42 +1,56 @@
 import ply.lex as lex
 
 class Lexer:
-    # A lista de tokens, porque sem esses caras a gente não faz nada.
+    # A lista de tokens.
     tokens = [
-        'KEYWORD', 'TYPE', 'OPERATOR', 'ASSIGN', 'NUMBER',
-        'STRING', 'IDENTIFIER', 'SYMBOL'
+        'KEYWORD', 
+        'TYPE', 
+        'OPERATOR', 
+        'ASSIGN', 
+        'NUMBER',
+        'STRING', 
+        'IDENTIFIER', 
+        'SYMBOL'
     ]
 
     # Palavras-chave e tipos.
     keywords = {
-        'INICIO', 'FIM', 'PROGAMA', 'IMPLEMENTACAO', 'EXECUCAO', 'PRINCIPAL', 
-        'MODULO', 'variavel', 'tipo', 'escreva', 'pergunte', 'EXECUTAR', 
-        'SE', 'SENAO', 'ENQUANTO', 'FAÇA', 'ENTAO', 'funcao', 'retorne', 
-        'GRUPO', 'importe'  # Aqui adicionamos "importe"
+        'INICIO', 'FIM', 'PROGAMA', 'IMPLEMENTACAO', 'EXECUCAO', 'PRINCIPAL',
+        'MODULO', 'variavel', 'tipo', 'escreva', 'pergunte', 'EXECUTAR',
+        'SE', 'SENAO', 'ENQUANTO', 'FACA', 'ENTAO', 'funcao', 'retorne',
+        'GRUPO', 'importe',
+
+        # -------------
+        # Novas keywords
+        # -------------
+        'PARA',     # Para laço do tipo for
+        'ATE',      # Ex: PARA i = 0 ATE 10
+        'PASSO',    # Incremento do loop
+        'REPITA'    # Ex: REPITA ... ATE ...
     }
 
-    # Tipos que fingimos que sabemos lidar.
+    # Conjunto de tipos que a linguagem Zin reconhece
     types = {'inteiro', 'texto', 'decimal', 'booleano', 'lista', 'grupo'}
 
-    # Regras de expressões regulares.
+    # Expressões regulares
     t_ASSIGN = r'='
     t_OPERATOR = r'\+|\-|\*|/|>=|<=|==|!=|>|<'
     t_SYMBOL = r'[{}().,\[\]]'
     t_STRING = r'\".*?\"|\'.*?\''
     t_ignore = ' \t'
 
-    # Achamos um número? Então convertemos se tiver ponto ou não.
+    # Número
     def t_NUMBER(self, t):
         r'\d+(\.\d+)?'
         t.value = float(t.value) if '.' in t.value else int(t.value)
         return t
 
-    # Ignorar comentários iniciados por #
+    # Ignorar comentários
     def t_COMMENT(self, t):
         r'\#.*'
         pass
 
-    # Identificadores.
+    # Identificadores
     def t_IDENTIFIER(self, t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
         if t.value in self.keywords:
@@ -45,58 +59,46 @@ class Lexer:
             t.type = 'TYPE'
         return t
 
-    # Contar linhas.
+    # Nova linha
     def t_newline(self, t):
         r'\n+'
         t.lexer.lineno += len(t.value)
 
-    # Lidar com tokens inválidos.
+    # Erro léxico
     def t_error(self, t):
-        raise SyntaxError(f"Token inválido: {t.value[0]}")
+        error_message = f"Token inválido '{t.value[0]}' na linha {t.lineno}, posição {t.lexpos}."
+        raise SyntaxError(error_message)
         t.lexer.skip(1)
 
-    # Método build para criar o lexer.
+    # Constrói o lexer
     def build(self, **kwargs):
+        import ply.lex as lex
         self.lexer = lex.lex(module=self, **kwargs)
 
-    # Método tokenize para processar o código.
+    # Tokeniza um código
     def tokenize(self, data):
-        self.lexer.input(data)
-        return list(iter(self.lexer.token, None))
+        try:
+            self.lexer.input(data)
+            return list(iter(self.lexer.token, None))
+        except SyntaxError as e:
+            print(f"Erro durante a tokenização: {e}")
+            return []
 
-
-# Teste do Lexer com PLY para ver se funciona.
 if __name__ == "__main__":
-    # Teste com IMPORTAÇÃO
+
     code = """
-    INICIO PROGAMA TESTE_IMPORT.
+    INICIO PROGAMA TESTE_ERRO.
     importe zin_math.
-    importe zin_file.
-
     variavel resultado_raiz tipo decimal
-    variavel conteudo_arquivo tipo texto
-
-    IMPLEMENTACAO PROGAMA TESTE_IMPORT.
-    PRINCIPAL.
-        resultado_raiz = zin_math.raiz_quadrada(49).
-        escreva("A raiz quadrada de 49 é: {resultado_raiz}").
-
-        zin_file.escrever_arquivo("teste.txt", "Este é um teste com Zin.").
-        conteudo_arquivo = zin_file.ler_arquivo("teste.txt").
-        escreva("Conteúdo do arquivo: {conteudo_arquivo}").
-
-    FIM PRINCIPAL.
-
-    EXECUCAO PROGAMA TESTE_IMPORT.
-    EXECUTAR PRINCIPAL.
-
-    FIM PROGAMA TESTE_IMPORT.
-
+    resultado_raiz = zin_math.raiz_quadrada(49))
+    FIM PROGAMA TESTE_ERRO.
     """
 
     lexer = Lexer()
     lexer.build()
-    tokens = lexer.tokenize(code)
-
-    for token in tokens:
-        print(token)
+    try:
+        tokens = lexer.tokenize(code)
+        for token in tokens:
+            print(token)
+    except SyntaxError as e:
+        print(f"Erro capturado no teste: {e}")

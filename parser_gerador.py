@@ -17,7 +17,6 @@ class Parser:
             }
         }
 
-    # Avança para o próximo token
     def advance(self):
         self.index += 1
         if self.index < len(self.tokens):
@@ -25,7 +24,6 @@ class Parser:
         else:
             self.current_token = None
 
-    # Garante que o token atual é o que esperamos
     def expect(self, token_type, value=None):
         if self.current_token is None:
             raise SyntaxError("Token inesperado: fim do arquivo")
@@ -33,7 +31,6 @@ class Parser:
             raise SyntaxError(f"Token inesperado: {self.current_token}")
         self.advance()
 
-    # Ponto de entrada do parser
     def parse(self):
         self.advance()
         self.parse_inicio()
@@ -51,11 +48,10 @@ class Parser:
         self.expect("IDENTIFIER")
         self.expect("SYMBOL", ".")
 
-        # Importes
+
         while self.current_token and self.current_token.value == "importe":
             self.ast["programa"].setdefault("importes", []).append(self.parse_importe())
 
-        # Variáveis
         while self.current_token and self.current_token.value == "variavel":
             self.parse_variavel()
 
@@ -87,7 +83,7 @@ class Parser:
                 {"nome": nome, "tipo": tipo, "valores": valores}
             )
         else:
-            # Variáveis normais
+
             self.ast["programa"]["variaveis"].append({"nome": nome, "tipo": tipo})
 
     # ---------------------------------------------------------
@@ -99,7 +95,7 @@ class Parser:
         self.expect("IDENTIFIER", self.ast["programa"]["nome"])
         self.expect("SYMBOL", ".")
 
-        # PRINCIPAL
+
         self.expect("KEYWORD", "PRINCIPAL")
         self.expect("SYMBOL", ".")
         principal = []
@@ -110,13 +106,11 @@ class Parser:
         self.expect("SYMBOL", ".")
         self.ast["programa"]["implementacao"]["principal"] = principal
 
-        # execucoes_apos_principal
         execucoes_apos_principal = []
         while self.current_token and self.current_token.value not in ("MODULO", "EXECUCAO"):
             execucoes_apos_principal.append(self.parse_statement())
         self.ast["programa"]["implementacao"]["execucoes_apos_principal"] = execucoes_apos_principal
 
-        # MODULOS
         while self.current_token and self.current_token.value == "MODULO":
             self.parse_modulo()
 
@@ -184,7 +178,6 @@ class Parser:
         self.expect("KEYWORD", "GRUPO")
         self.expect("SYMBOL", "(")
 
-        # Cabeçalho
         self.expect("SYMBOL", "[")
         campos = []
         while self.current_token and self.current_token.value != "]":
@@ -197,7 +190,7 @@ class Parser:
                 raise SyntaxError(f"Campo inválido no cabeçalho do grupo: {self.current_token}")
         self.expect("SYMBOL", "]")
 
-        # Registros (se houver)
+
         dados = []
         if self.current_token and self.current_token.value == ",":
             self.expect("SYMBOL", ",")
@@ -241,26 +234,21 @@ class Parser:
         - etc.
         """
 
-        # A) Se for IDENTIFIER, checamos se é atribuição
         if self.current_token and self.current_token.type == "IDENTIFIER":
             nome_ident = self.current_token.value
             self.expect("IDENTIFIER")
 
-            # Se vier '=', então "variavel = expr."
             if self.current_token and self.current_token.type == "ASSIGN":
                 self.expect("ASSIGN")
                 valor = self.parse_expression()
                 self.expect("SYMBOL", ".")
                 return {"atribuir": {"variavel": nome_ident, "valor": valor}}
 
-            # Se não vier '=', é erro? Depende. 
-            # Levantamos erro ou podemos tratar de outra forma? 
             else:
                 raise SyntaxError(
                     f"Era esperado '=' após '{nome_ident}', mas veio: {self.current_token}"
                 )
 
-        # B) Se é escreva
         elif self.current_token and self.current_token.value == "escreva":
             self.expect("KEYWORD", "escreva")
             self.expect("SYMBOL", "(")
@@ -270,11 +258,9 @@ class Parser:
             self.expect("SYMBOL", ".")
             return {"escreva": texto.strip('"')}
 
-        # C) Se é importe
         elif self.current_token and self.current_token.value == "importe":
             return self.parse_importe()
 
-        # D) Se é pergunte
         elif self.current_token and self.current_token.value == "pergunte":
             self.expect("KEYWORD", "pergunte")
             self.expect("SYMBOL", "(")
@@ -288,16 +274,19 @@ class Parser:
             self.expect("SYMBOL", ".")
             return {"pergunte": {"texto": texto.strip('"'), "variavel": variavel}}
 
-        # E) Se é SE
-        # se e se kkkk ficou bom isso
         elif self.current_token and self.current_token.value == "SE":
             return self.parse_se()
 
-        # F) Se é ENQUANTO
         elif self.current_token and self.current_token.value == "ENQUANTO":
             return self.parse_enquanto()
+        
 
-        # G) Se é EXECUTAR
+        elif self.current_token and self.current_token.value == "PARA":
+            return self.parse_para()
+        
+        elif self.current_token and self.current_token.value == "REPITA":
+            return self.parse_repita()
+
         elif self.current_token and self.current_token.value == "EXECUTAR":
             self.expect("KEYWORD", "EXECUTAR")
             if self.current_token.value == "MODULO":
@@ -312,7 +301,6 @@ class Parser:
                 self.expect("SYMBOL", ".")
                 return {"executar": nome_qualquer}
 
-        # Nada bateu
         raise SyntaxError(f"Comando desconhecido ou inválido: {self.current_token}")
 
     # ---------------------------------------------------------
@@ -331,6 +319,78 @@ class Parser:
     def parse_expression(self):
         left_node = self.parse_binop()
         return left_node
+    
+
+    def parse_para(self):
+        """
+        Exemplo de sintaxe:
+        PARA i = 0 ATE 10 PASSO 2 FACA.
+            ... bloco ...
+        FIM PARA.
+        """
+
+        self.expect("KEYWORD", "PARA")
+
+        var_name = None
+        if self.current_token.type == "IDENTIFIER":
+            var_name = self.current_token.value
+            self.advance()
+        else:
+            raise SyntaxError(f"Era esperado um identificador após 'PARA', mas veio: {self.current_token}")
+
+
+        self.expect("ASSIGN")  # '='
+
+
+        start_expr = self.parse_expression()
+
+
+        self.expect("KEYWORD", "ATE")
+
+
+        end_expr = self.parse_expression()
+
+
+        step_expr = None
+        if self.current_token and self.current_token.value == "PASSO":
+            self.expect("KEYWORD", "PASSO")
+            step_expr = self.parse_expression()
+
+
+        self.expect("KEYWORD", "FACA")
+        self.expect("SYMBOL", ".")
+
+
+        bloco_para = []
+        while self.current_token and not (
+            self.current_token.value == "FIM" and self._peek_next_value() == "PARA"
+        ):
+            bloco_para.append(self.parse_statement())
+
+
+        self.expect("KEYWORD", "FIM")
+        self.expect("KEYWORD", "PARA")
+        self.expect("SYMBOL", ".")
+
+        return {
+            "tipo": "PARA",
+            "var": var_name,
+            "start": start_expr,
+            "end": end_expr,
+            "step": step_expr,
+            "bloco": bloco_para
+        }
+
+    def _peek_next_value(self):
+        """
+        Método auxiliar que tenta ver o 'próximo' token sem consumir o atual,
+        para ajudar no parse do 'FIM PARA' (e não confundir 'FIM PROGAMA', etc.).
+        """
+        next_index = self.index + 1
+        if next_index < len(self.tokens):
+            return self.tokens[next_index].value
+        return None
+
 
     def parse_binop(self):
         """
@@ -340,14 +400,14 @@ class Parser:
         OBS: Isso não implementa precedência real, mas já aceita expressões
         sequenciais como "10 + x * y - func(3)".
         """
-        node = self.parse_primary()  # left
+        node = self.parse_primary()  
 
-        # Enquanto houver um OPERATOR, consome e parseia o "right"
+
         while self.current_token and self.current_token.type == "OPERATOR":
             op = self.current_token.value
             self.expect("OPERATOR")
             right = self.parse_primary()
-            # Construímos um nó binário
+
             node = {
                 "left": node,
                 "operator": op,
@@ -355,6 +415,49 @@ class Parser:
             }
 
         return node
+    
+
+    def parse_repita(self):
+        """
+        Exemplo de sintaxe:
+        REPITA.
+            ... bloco ...
+        ATE (condicao).
+        
+        ou se você quiser algo como
+        REPITA.
+            ...
+        FIM REPITA ATE (condição).
+        
+        Ajuste conforme a sintaxe que desejar.
+        """
+        self.expect("KEYWORD", "REPITA")
+        self.expect("SYMBOL", ".")
+
+        bloco_repita = []
+        
+        while self.current_token and self.current_token.value != "ATE":
+            bloco_repita.append(self.parse_statement())
+
+        
+        self.expect("KEYWORD", "ATE")
+
+
+        if self.current_token and self.current_token.value == "(":
+            self.expect("SYMBOL", "(")
+            cond_expr = self.parse_expression()
+            self.expect("SYMBOL", ")")
+        else:
+           
+            cond_expr = self.parse_expression()
+
+
+        return {
+            "tipo": "REPITA",
+            "bloco": bloco_repita,
+            "condicao": cond_expr
+        }
+
 
     def parse_primary(self):
         """
@@ -369,28 +472,23 @@ class Parser:
 
         token = self.current_token
 
-        # 1) Se for NUMBER, retornamos o valor e avançamos
         if token.type == "NUMBER":
             value = token.value
             self.expect("NUMBER")
             return value
 
-        # 2) Se for IDENTIFIER, pode ser:
-        #    - "ident" (variável normal)
-        #    - "ident . ident ( ... )" (módulo/função)
-        #    - "ident("...")" (função sem módulo)
-        #    - "ident[ índice ]" (acesso de lista)
+
         if token.type == "IDENTIFIER":
             ident1 = token.value
             self.expect("IDENTIFIER")
 
-            # Se vier '.', pode ser "ident1.ident2..."
+
             if self.current_token and self.current_token.type == "SYMBOL" and self.current_token.value == ".":
                 self.expect("SYMBOL", ".")
                 ident2 = self.current_token.value
                 self.expect("IDENTIFIER")
 
-                # Se vier '(', é chamada de função
+
                 if self.current_token and self.current_token.type == "SYMBOL" and self.current_token.value == "(":
                     args = self.parse_function_args()
                     return {
@@ -401,7 +499,7 @@ class Parser:
                         }
                     }
                 else:
-                    # Poderia  ser algo do tipo "modulo.variavel"? nao sei se faz sentido
+
                     return {
                         "acesso_modulo": {
                             "modulo": ident1,
@@ -409,7 +507,6 @@ class Parser:
                         }
                     }
 
-            # Se não vier '.', mas vier '(', é função normal "ident1(...)"
             elif self.current_token and self.current_token.type == "SYMBOL" and self.current_token.value == "(":
                 args = self.parse_function_args(func_name=ident1)
                 return {
@@ -419,7 +516,6 @@ class Parser:
                     }
                 }
 
-            # Se não vier '.', nem '(', mas vier '[', é acesso a lista "ident1[índice]"
             elif self.current_token and self.current_token.type == "SYMBOL" and self.current_token.value == "[":
                 self.expect("SYMBOL", "[")
                 index_expr = self.parse_expression()
@@ -431,29 +527,22 @@ class Parser:
                     }
                 }
             else:
-                # Caso contrário, é só um identificador "puro" (variável)
-                return ident1
 
-        # 3) Se for '(', podemos suportar sub-expressões (ex.: (1+2)*3). 
+                return ident1
+ 
         if token.type == "SYMBOL" and token.value == "(":
             self.expect("SYMBOL", "(")
             expr = self.parse_expression()
             self.expect("SYMBOL", ")")
             return expr
 
-        # Se não for NUMBER, nem IDENTIFIER, nem '(', erro
         raise SyntaxError(f"Expressão inválida em parse_primary: {token}")
 
     def parse_function_args(self, func_name=None):
         """
         Consumimos '(' e lemos argumentos até ')'.
         """
-        # Aqui, assumimos que a gente *já leu* o '(' fora (ou vamos ler aqui).
-        # Pra simplificar, vamos supor que parse_primary chamou parse_function_args
-        # já tendo visto o '('.
-        # Como parse_primary já consumiu '(', se preferir, abra um if:
-        # if self.current_token.value == "(":
-        #     self.expect("SYMBOL","(")
+
 
         args = []
         self.expect("SYMBOL", "(")
@@ -498,7 +587,7 @@ class Parser:
     def parse_enquanto(self):
         self.expect("KEYWORD", "ENQUANTO")
         condicao = self.parse_expression()
-        self.expect("KEYWORD", "FAÇA")
+        self.expect("KEYWORD", "FACA")
         self.expect("SYMBOL", ".")
         bloco_enquanto = []
         while self.current_token and self.current_token.value != "FIM":

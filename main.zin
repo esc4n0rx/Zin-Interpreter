@@ -1,16 +1,57 @@
-INICIO PROGAMA TESTE_IMPORT.
+INICIO PROGAMA ZIN_AVANCADO.
 importe zin_math.
 
-variavel resultado_raiz tipo decimal
+variavel contador tipo inteiro
+variavel elevado tipo decimal
+variavel input_valor tipo inteiro
+variavel numeros tipo lista = [1, 2, 3, 4, 5]
 
-IMPLEMENTACAO PROGAMA TESTE_IMPORT.
+
+variavel produtos tipo grupo = GRUPO(
+    ["NOME", "PRECO"],
+    ["Caneta", 1.50],
+    ["Lápis", 0.80],
+    ["Borracha", 2.00]
+)
+
+IMPLEMENTACAO PROGAMA ZIN_AVANCADO.
 PRINCIPAL.
-    resultado_raiz = zin_math.raiz_quadrada(49).
-    escreva("A raiz quadrada de 49 é: {resultado_raiz}").
+
+    escreva("=== Demonstração de LOOP PARA com lista ===").
+
+    PARA contador = 0 ATE 4 PASSO 1 FACA.
+        escreva("Elemento {contador} na lista: {numeros[contador]}").
+    FIM PARA.
+
+    escreva("=== Demonstração de LOOP REPITA ===").
+
+    
+    REPITA.
+        pergunte("Digite 99 para encerrar o REPITA: " {input_valor}).
+    ATE (input_valor == 99)
+
+    escreva("=== Demonstração de SE ... SENAO ===").
+
+    SE numeros[0] == 1 ENTAO.
+        escreva("Primeiro item de 'numeros' é 1!").
+    SENAO.
+        escreva("Primeiro item de 'numeros' não é 1!").
+    FIM SE.
+
+    escreva("=== Demonstração de chamada de função em módulo (zin_math) ===").
+
+    elevado = zin_math.potencia(2, 10).
+    escreva("2 elevado a 10 é: {elevado}").
+
+    escreva("=== Acessando dados do grupo 'produtos' ===").
+
+    escreva("Primeiro produto: {produtos[0].NOME} = R$ {produtos[0].PRECO}").
+    escreva("Segundo produto: {produtos[1].NOME} = R$ {produtos[1].PRECO}").
+    escreva("Terceiro produto: {produtos[2].NOME} = R$ {produtos[2].PRECO}").
 
 FIM PRINCIPAL.
 
-EXECUCAO PROGAMA TESTE_IMPORT.
+EXECUCAO PROGAMA ZIN_AVANCADO.
 EXECUTAR PRINCIPAL.
 
-FIM PROGAMA TESTE_IMPORT.
+FIM PROGAMA ZIN_AVANCADO.
